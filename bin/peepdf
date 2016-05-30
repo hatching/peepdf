@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 #
 # peepdf is a tool to analyse and modify PDF files
 #    http://peepdf.eternal-todo.com
