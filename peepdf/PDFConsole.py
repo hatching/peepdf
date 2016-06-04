@@ -35,6 +35,7 @@ import hashlib
 import traceback
 import jsbeautifier
 from peepdf.PDFUtils import *
+from peepdf.PDFOutput import *
 from peepdf.PDFCrypto import *
 from peepdf.JSAnalysis import *
 from peepdf.PDFCore import *
@@ -80,7 +81,7 @@ filter2RealFilterDict = {'b64': 'base64', 'base64': 'base64', 'asciihex': '/ASCI
                          'jbig2': '/JBIG2Decode', 'dct': '/DCTDecode', 'jpx': '/JPXDecode'}
 
 
-class PDFConsole(cmd.Cmd):
+class PDFConsole(cmd.Cmd, PDFOutput):
     '''
         Class of the peepdf interactive console. To see details about commands: http://code.google.com/p/peepdf/wiki/Commands
     '''
@@ -88,28 +89,16 @@ class PDFConsole(cmd.Cmd):
     def __init__(self, pdfFile, vtKey, avoidOutputColors=False, stdin=None, batchMode=False, jsonOutput=False):
         global COLORIZED_OUTPUT
         cmd.Cmd.__init__(self, stdin=stdin)
-        self.warningColor = ''
-        self.errorColor = ''
-        self.alertColor = ''
-        self.staticColor = ''
-        self.resetColor = ''
-        if not COLORIZED_OUTPUT or avoidOutputColors:
-            self.avoidOutputColors = True
-        else:
+        PDFOutput.__init__(self, avoidOutputColors)
+        if COLORIZED_OUTPUT and not avoidOutputColors:
             try:
-                init()
-                self.warningColor = Fore.YELLOW
-                self.errorColor = Fore.RED
-                self.alertColor = Fore.RED
-                self.staticColor = Fore.BLUE
                 self.promptColor = RL_PROMPT_START_IGNORE + Fore.GREEN + RL_PROMPT_END_IGNORE
-                self.resetColor = Style.RESET_ALL
-                self.avoidOutputColors = False
+                self.avoidColor = False
             except:
-                self.avoidOutputColors = True
+                self.avoidColor = True
                 COLORIZED_OUTPUT = False
 
-        if not self.avoidOutputColors:
+        if not self.avoidColor:
             self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
         else:
             self.prompt = 'PPDF> '
@@ -1408,151 +1397,19 @@ class PDFConsole(cmd.Cmd):
             message = '*** Error: You must open a file!!'
             self.log_output('info ' + argv, message)
             return False
-        stats = ''
         args = self.parseArgs(argv)
         if args is None:
             message = '*** Error: The command line arguments have not been parsed successfully!!'
             self.log_output('info ' + argv, message)
             return False
-        if not self.avoidOutputColors:
+        if not self.avoidColor:
             beforeStaticLabel = self.staticColor
         else:
             beforeStaticLabel = ''
+        stats = ""
         if len(args) == 0:
             statsDict = self.pdfFile.getStats()
-            stats += beforeStaticLabel + 'File: ' + self.resetColor + statsDict['File'] + newLine
-            stats += beforeStaticLabel + 'MD5: ' + self.resetColor + statsDict['MD5'] + newLine
-            stats += beforeStaticLabel + 'SHA1: ' + self.resetColor + statsDict['SHA1'] + newLine
-            #stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + newLine
-            stats += beforeStaticLabel + 'Size: ' + self.resetColor + statsDict['Size'] + ' bytes' + newLine
-            if statsDict['Detection'] != []:
-                detectionReportInfo = ''
-                if statsDict['Detection'] is not None:
-                    detectionLevel = statsDict['Detection'][0] / (statsDict['Detection'][1] / 3)
-                    if detectionLevel == 0:
-                        detectionColor = self.alertColor
-                    elif detectionLevel == 1:
-                        detectionColor = self.warningColor
-                    else:
-                        detectionColor = ''
-                    detectionRate = '%s%d%s/%d' % (
-                        detectionColor, statsDict['Detection'][0], self.resetColor, statsDict['Detection'][1])
-                    if statsDict['Detection report'] != '':
-                        detectionReportInfo = beforeStaticLabel + 'Detection report: ' + self.resetColor + statsDict[
-                            'Detection report'] + newLine
-                    else:
-                        detectionRate = 'File not found on VirusTotal'
-                    stats += beforeStaticLabel + 'Detection: ' + self.resetColor + detectionRate + newLine
-                    stats += detectionReportInfo
-            stats += beforeStaticLabel + 'Version: ' + self.resetColor + statsDict['Version'] + newLine
-            stats += beforeStaticLabel + 'Binary: ' + self.resetColor + statsDict['Binary'] + newLine
-            stats += beforeStaticLabel + 'Linearized: ' + self.resetColor + statsDict['Linearized'] + newLine
-            stats += beforeStaticLabel + 'Encrypted: ' + self.resetColor + statsDict['Encrypted']
-            if statsDict['Encryption Algorithms'] != []:
-                stats += ' ('
-                for algorithmInfo in statsDict['Encryption Algorithms']:
-                    stats += algorithmInfo[0] + ' ' + str(algorithmInfo[1]) + ' bits, '
-                stats = stats[:-2] + ')'
-            stats += newLine
-            stats += beforeStaticLabel + 'Updates: ' + self.resetColor + statsDict['Updates'] + newLine
-            stats += beforeStaticLabel + 'Objects: ' + self.resetColor + statsDict['Objects'] + newLine
-            stats += beforeStaticLabel + 'Streams: ' + self.resetColor + statsDict['Streams'] + newLine
-            stats += beforeStaticLabel + 'URIs: ' + self.resetColor + statsDict['URIs'] + newLine
-            stats += beforeStaticLabel + 'Comments: ' + self.resetColor + statsDict['Comments'] + newLine
-            stats += beforeStaticLabel + 'Errors: ' + self.resetColor + str(len(statsDict['Errors'])) + newLine * 2
-            for version in range(len(statsDict['Versions'])):
-                statsVersion = statsDict['Versions'][version]
-                stats += beforeStaticLabel + 'Version ' + self.resetColor + str(version) + ':' + newLine
-                if statsVersion['Catalog'] is not None:
-                    stats += beforeStaticLabel + '\tCatalog: ' + self.resetColor + statsVersion['Catalog'] + newLine
-                else:
-                    stats += beforeStaticLabel + '\tCatalog: ' + self.resetColor + 'No' + newLine
-                if statsVersion['Info'] is not None:
-                    stats += beforeStaticLabel + '\tInfo: ' + self.resetColor + statsVersion['Info'] + newLine
-                else:
-                    stats += beforeStaticLabel + '\tInfo: ' + self.resetColor + 'No' + newLine
-                stats += beforeStaticLabel + '\tObjects (' + statsVersion['Objects'][0] + '): ' + \
-                         self.resetColor + str(statsVersion['Objects'][1]) + newLine
-                if statsVersion['Compressed Objects'] is not None:
-                    stats += beforeStaticLabel + '\tCompressed objects (' +\
-                             statsVersion['Compressed Objects'][0] + '): ' + self.resetColor + \
-                             str(statsVersion['Compressed Objects'][1]) + newLine
-                if statsVersion['Errors'] is not None:
-                    stats += beforeStaticLabel + '\t\tErrors (' + statsVersion['Errors'][0] + '): ' + \
-                             self.resetColor + str(statsVersion['Errors'][1]) + newLine
-                stats += beforeStaticLabel + '\tStreams (' + statsVersion['Streams'][0] + '): ' + \
-                         self.resetColor + str(statsVersion['Streams'][1])
-                if statsVersion['Xref Streams'] is not None:
-                    stats += newLine + beforeStaticLabel + '\t\tXref streams (' + \
-                             statsVersion['Xref Streams'][0] + '): ' + self.resetColor + \
-                             str(statsVersion['Xref Streams'][1])
-                if statsVersion['Object Streams'] is not None:
-                    stats += newLine + beforeStaticLabel + '\t\tObject streams (' + \
-                             statsVersion['Object Streams'][0] + '): ' + self.resetColor + \
-                             str(statsVersion['Object Streams'][1])
-                if int(statsVersion['Streams'][0]) > 0:
-                    stats += newLine + beforeStaticLabel + '\t\tEncoded (' + statsVersion['Encoded'][0] + '): ' + \
-                             self.resetColor + str(statsVersion['Encoded'][1])
-                    if statsVersion['Decoding Errors'] is not None:
-                        stats += newLine + beforeStaticLabel + '\t\tDecoding errors (' + \
-                                 statsVersion['Decoding Errors'][0] + '): ' + self.resetColor + str(
-                            statsVersion['Decoding Errors'][1])
-                if statsVersion['URIs'] is not None:
-                    stats += newLine + beforeStaticLabel + '\tObjects with URIs (' + \
-                             statsVersion['URIs'][0] + '): ' + self.resetColor + str(statsVersion['URIs'][1])
-                if not self.avoidOutputColors:
-                    beforeStaticLabel = self.warningColor
-                if statsVersion['Objects with JS code'] is not None:
-                    stats += newLine + beforeStaticLabel + '\tObjects with JS code (' + \
-                             statsVersion['Objects with JS code'][0] + '): ' + \
-                             self.resetColor + str(statsVersion['Objects with JS code'][1])
-                actions = statsVersion['Actions']
-                events = statsVersion['Events']
-                vulns = statsVersion['Vulns']
-                elements = statsVersion['Elements']
-                if events is not None or actions is not None or vulns is not None or elements is not None:
-                    stats += newLine + beforeStaticLabel + '\tSuspicious elements:' + self.resetColor + newLine
-                    if events is not None:
-                        for event in events:
-                            stats += '\t\t' + beforeStaticLabel + event + ' (%d): ' % len(events[event]) + \
-                                     self.resetColor + str(events[event]) + newLine
-                    if actions is not None:
-                        for action in actions:
-                            stats += '\t\t' + beforeStaticLabel + action + ' (%d): ' % len(actions[action]) + \
-                                     self.resetColor + str(actions[action]) + newLine
-                    if vulns is not None:
-                        for vuln in vulns:
-                            if vulnsDict.has_key(vuln):
-                                vulnName = vulnsDict[vuln][0]
-                                vulnCVEList = vulnsDict[vuln][1]
-                                stats += '\t\t' + beforeStaticLabel + vulnName + ' ('
-                                for vulnCVE in vulnCVEList:
-                                    stats += vulnCVE + ','
-                                stats = stats[:-1] + ') (%d): ' % len(vulns[vuln]) + self.resetColor + \
-                                        str(vulns[vuln]) + newLine
-                            else:
-                                stats += '\t\t' + beforeStaticLabel + vuln + ' (%d): ' % len(vulns[vuln]) + \
-                                         self.resetColor + str(vulns[vuln]) + newLine
-                    if elements is not None:
-                        for element in elements:
-                            if vulnsDict.has_key(element):
-                                vulnName = vulnsDict[element][0]
-                                vulnCVEList = vulnsDict[element][1]
-                                stats += '\t\t' + beforeStaticLabel + vulnName + ' ('
-                                for vulnCVE in vulnCVEList:
-                                    stats += vulnCVE + ','
-                                stats = stats[:-1] + '): ' + self.resetColor + str(elements[element]) + newLine
-                            else:
-                                stats += '\t\t' + beforeStaticLabel + element + ': ' + self.resetColor + str(
-                                    elements[element]) + newLine
-                if not self.avoidOutputColors:
-                    beforeStaticLabel = self.staticColor
-                urls = statsVersion['URLs']
-                if urls is not None:
-                    stats += newLine + beforeStaticLabel + '\tFound URLs:' + self.resetColor + newLine
-                    for url in urls:
-                        stats += '\t\t' + url + newLine
-                stats += newLine * 2
+            stats = self.getPeepReport(statsDict)
             self.log_output('info ' + argv, stats)
             return False
         elif len(args) == 1:
@@ -2863,8 +2720,7 @@ class PDFConsole(cmd.Cmd):
             message = '*** Error: Opening document failed!!'
             self.pdfFile = None
         self.log_output('open ' + argv, message)
-        if not JS_MODULE:
-            print 'Warning: PyV8 is not installed!!' + newLine
+        print self.dependenciesWarning()
         if self.pdfFile is not None:
             self.do_info('')
 
@@ -3727,7 +3583,7 @@ class PDFConsole(cmd.Cmd):
                     if args == []:
                         self.pdfFile.setDetectionRate([jsonDict['positives'], jsonDict['total']])
                         self.pdfFile.setDetectionReport(jsonDict['permalink'])
-                    if not self.avoidOutputColors:
+                    if not self.avoidColor:
                         detectionLevel = jsonDict['positives'] / (jsonDict['total'] / 3)
                         if detectionLevel == 0:
                             detectionColor = self.alertColor
