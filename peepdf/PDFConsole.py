@@ -117,6 +117,8 @@ class PDFConsole(PDFOutput, cmd.Cmd):
         cmd.Cmd.__init__(self, stdin=self.stdin)
 
         self.pdfFile = pdfFile
+        if pdfFile is not None:
+            self.intro = self.getPeepReport(pdfFile.getStats())
         self.variables = {'output_limit': [500, 500],
                           'malformed_options': [[], []],
                           'header_file': [None, None],
