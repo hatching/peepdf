@@ -1,12 +1,14 @@
 from setuptools import find_packages, setup
 
+execfile("peepdf/constants.py")
+
 setup(
     name = "peepdf",
-    version = "0.3-r235",
-    author = "Jose Miguel Esparza",
-    license = "GNU GPLv3",
+    version = PEEPDF_VERSION + ".post" + PEEPDF_REVISION,
+    author = AUTHOR,
+    license = LICENCE,
     scripts = [ "bin/peepdf" ],
-    url = "http://eternal-todo.com",
+    url = PEEPDF_URL,
     install_requires = [ "jsbeautifier==1.6.2", "colorama", "pythonaes==1.0" ],
     dependency_links = ["git+https://github.com/serprex/pythonaes.git@setup#egg=pythonaes-1.0"],
     packages = find_packages(),

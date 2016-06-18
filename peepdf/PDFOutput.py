@@ -34,6 +34,9 @@ from datetime import datetime
 from peepdf.PDFCore import PDFParser, vulnsDict
 from peepdf.PDFUtils import vtcheck
 
+from peepdf.constants import AUTHOR, AUTHOR_EMAIL, PEEPDF_VERSION, PEEPDF_REVISION, \
+    PEEPDF_URL, PEEPDF_ROOT
+
 try:
     import PyV8
     JS_MODULE = True
@@ -56,6 +59,12 @@ try:
 except:
     PIL_MODULE = False
 
+try:
+    from lxml import etree
+    LXML_MODULE = True
+except:
+    LXML_MODULE = False
+    
 
 class PDFOutput(object):
 
@@ -107,19 +116,19 @@ class PDFOutput(object):
 
     def getJSON(self, statsDict):
         try:
-            return self.getPeepJSON(statsDict, version, revision)
+            return self.getPeepJSON(statsDict) 
         except:
             errorMessage = '*** Error: Exception while generating the JSON report!!'
             print self.errorColor + errorMessage + self.resetColor + self.newLine
             traceback.print_exc(file=open(self.errorsFile, 'a'))
             raise Exception('PeepException', 'Send me an email ;)')
 
-    def getPeepJSON(statsDict, version, revision):
+    def getPeepJSON(self, statsDict):
         # peepdf info
-        peepdfDict = {'version': version,
-                      'revision': revision,
-                      'author': 'Jose Miguel Esparza',
-                      'url': 'http://peepdf.eternal-todo.com'}
+        peepdfDict = {'version': PEEPDF_VERSION,
+                      'revision': PEEPDF_REVISION,
+                      'author': AUTHOR,
+                      'url': PEEPDF_URL}
         # Basic info
         basicDict = {}
         basicDict['filename'] = statsDict['File']
@@ -228,8 +237,7 @@ class PDFOutput(object):
 
     def getXML(self, statsDict):
         try:
-            from lxml import etree
-            return self.getPeepXML(statsDict, __version__, revision)
+            return self.getPeepXML(statsDict)
         except ImportError:
             raise
         except:
@@ -238,9 +246,11 @@ class PDFOutput(object):
             traceback.print_exc(file=open(self.errorsFile, 'a'))
             raise Exception('PeepException', 'Send me an email ;)')
 
-    def getPeepXML(statsDict, version, revision):
-        root = etree.Element('peepdf_analysis', version=version + ' r' + revision, url='http://peepdf.eternal-todo.com',
-                             author='Jose Miguel Esparza')
+    def getPeepXML(self, statsDict):
+        root = etree.Element('peepdf_analysis',
+                             version=PEEPDF_VERSION + ' r' + PEEPDF_REVISION,
+                             url=PEEPDF_URL,
+                             author=AUTHOR)
         analysisDate = etree.SubElement(root, 'date')
         analysisDate.text = datetime.today().strftime('%Y-%m-%d %H:%M')
         basicInfo = etree.SubElement(root, 'basic')

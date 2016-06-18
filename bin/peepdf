@@ -36,26 +36,20 @@ import peepdf.PDFOutput as PDFOutput
 import peepdf.PDFUtils as PDFUtils
 from peepdf.PDFCore import PDFParser
 
+from peepdf.constants import PEEPDF_VERSION, PEEPDF_REVISION, AUTHOR, AUTHOR_EMAIL, \
+    AUTHOR_TWITTER, PEEPDF_URL, GITHUB_URL, TWITTER_URL, PEEPDF_ROOT
 
-author = 'Jose Miguel Esparza'
-email = 'peepdf AT eternal-todo.com'
-url = 'http://peepdf.eternal-todo.com'
-twitter = 'http://twitter.com/EternalTodo'
-peepTwitter = 'http://twitter.com/peepdf'
-version = '0.3'
-revision = '275'
 newLine = os.linesep
-absPeepdfRoot = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 VT_KEY = 'fc90df3f5ac749a94a94cb8bf87e05a681a2eb001aef34b6a0084b8c22c97a64'
 
-versionHeader = 'Version: peepdf ' + version + ' r' + revision
-peepdfHeader = versionHeader + newLine * 2 + \
-               url + newLine + \
-               peepTwitter + newLine + \
-               email + newLine * 2 + \
-               author + newLine + \
-               twitter + newLine
+versionHeader = 'Version: peepdf ' + PEEPDF_VERSION + ' r' + PEEPDF_REVISION
+PeepdfHeader = versionHeader + newLine * 2 + \
+               PEEPDF_URL + newLine + \
+               TWITTER_URL + newLine + \
+               AUTHOR_EMAIL + newLine * 2 + \
+               AUTHOR + newLine + \
+               AUTHOR_TWITTER + newLine
 
 
 if __name__ == '__main__':
@@ -87,7 +81,7 @@ if __name__ == '__main__':
     (options, args) = argsParser.parse_args()
     
     try:
-        pdfOutput = PDFOutput.PDFOutput(os.path.join(absPeepdfRoot, 'errors.txt'), options.avoidColors)
+        pdfOutput = PDFOutput.PDFOutput(os.path.join(PEEPDF_ROOT, 'errors.txt'), options.avoidColors)
         if options.scriptFile is not None and options.commands:
             sys.stdout.write("scriptFile and commands options can't be used at the same time.\n")
             sys.exit(argsParser.print_help())
@@ -96,7 +90,7 @@ if __name__ == '__main__':
         elif options.update:
             updated = False
             newVersion = ''
-            localVersion = 'v' + version + ' r' + revision
+            localVersion = 'v' + PEEPDF_VERSION + ' r' + PEEPDF_REVISION
             reVersion = 'version = \'(\d\.\d)\'\s*?revision = \'(\d+)\''
             repURL = 'https://api.github.com/repos/jesparza/peepdf/contents/'
             rawRepURL = 'https://raw.githubusercontent.com/jesparza/peepdf/master/'
@@ -217,8 +211,8 @@ if __name__ == '__main__':
     finally:
         if os.path.exists(pdfOutput.errorsFile):
             message = pdfOutput.newLine + 'Please, don\'t forget to report the errors found:' + pdfOutput.newLine * 2
-            message += '\t- Sending the file "%s" to the author (mailto:peepdfREMOVETHIS@eternal-todo.com)%s' % (
-                pdfOutput.errorsFile, pdfOutput.newLine)
+            message += '\t- Sending the file "%s" to the author (mailto:%s)%s' % (
+                pdfOutput.errorsFile, AUTHOR_EMAIL, pdfOutput.newLine)
             message += '\t- And/Or creating an issue on the project webpage (https://github.com/jesparza/peepdf/issues)' + pdfOutput.newLine
             message = pdfOutput.errorColor + message + pdfOutput.resetColor
             sys.exit(message)
