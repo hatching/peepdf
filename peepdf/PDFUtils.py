@@ -437,3 +437,32 @@ def vtcheck(md5, vtKey):
     except:
         return (-1, 'An error has occurred while parsing the JSON response from VirusTotal')
     return (0, jsonDict)
+
+
+def getLocalFilesInfo(filesList):
+    localFilesInfo = {}
+    print '[-] Getting local files information...'
+    for path in filesList:
+        absFilePath = os.path.join(absPeepdfRoot, path)
+        if os.path.exists(absFilePath):
+            content = open(absFilePath, 'rb').read()
+            shaHash = hashlib.sha256(content).hexdigest()
+            localFilesInfo[path] = [shaHash, absFilePath]
+    print '[+] Done'
+    return localFilesInfo
+
+def getRepPaths(url, path=''):
+    paths = []
+    try:
+        browsingPage = urllib2.urlopen(url + path).read()
+    except:
+        sys.exit('[x] Connection error while getting browsing page "' + url + path + '"')
+    browsingPageObject = json.loads(browsingPage)
+    for file in browsingPageObject:
+        if file['type'] == 'file':
+            paths.append(file['path'])
+        elif file['type'] == 'dir':
+            dirPaths = getRepPaths(url, file['path'])
+            paths += dirPaths
+    return paths
+

@@ -81,31 +81,41 @@ filter2RealFilterDict = {'b64': 'base64', 'base64': 'base64', 'asciihex': '/ASCI
                          'jbig2': '/JBIG2Decode', 'dct': '/DCTDecode', 'jpx': '/JPXDecode'}
 
 
-class PDFConsole(cmd.Cmd, PDFOutput):
+class PDFConsole(PDFOutput, cmd.Cmd):
     '''
         Class of the peepdf interactive console. To see details about commands: http://code.google.com/p/peepdf/wiki/Commands
     '''
 
-    def __init__(self, pdfFile, vtKey, avoidOutputColors=False, stdin=None, batchMode=False, jsonOutput=False):
-        global COLORIZED_OUTPUT
-        cmd.Cmd.__init__(self, stdin=stdin)
-        PDFOutput.__init__(self, avoidOutputColors)
+    def __init__(self, pdfFile, vtKey, avoidOutputColors=False, stdin=None, batchMode=False, jsonOutput=False, scriptFile=None):
+        """
+            @batchMode: deprecated mode which purpose was to handle command on cli execution
+            @scriptFile: Script file path to execute. Overlap @stdin.
+        """
         if COLORIZED_OUTPUT and not avoidOutputColors:
             try:
                 self.promptColor = RL_PROMPT_START_IGNORE + Fore.GREEN + RL_PROMPT_END_IGNORE
                 self.avoidColor = False
             except:
                 self.avoidColor = True
-                COLORIZED_OUTPUT = False
+        PDFOutput.__init__(self, self.avoidColor)
 
-        if not self.avoidColor:
-            self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
-        else:
-            self.prompt = 'PPDF> '
-        self.use_rawinput = True
-        if stdin is not None:
+        if scriptFile is not None:
+            self.stdin = open(scriptFile, 'rb')
             self.use_rawinput = False
             self.prompt = ''
+        elif stdin is not None: 
+            self.stdin = stdin
+            self.use_rawinput = False
+            self.prompt = ''
+        else:
+            self.stdin = stdin
+            self.use_rawinput = True
+            if not self.avoidColor:
+                self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
+            else:
+                self.prompt = 'PPDF> '
+        cmd.Cmd.__init__(self, stdin=self.stdin)
+
         self.pdfFile = pdfFile
         self.variables = {'output_limit': [500, 500],
                           'malformed_options': [[], []],
@@ -121,6 +131,27 @@ class PDFConsole(cmd.Cmd, PDFOutput):
         self.jsonOutput = jsonOutput
         self.outputVarName = None
         self.outputFileName = None
+
+    def runit(self):
+        while not self.leaving:
+            try:
+                self.cmdloop()
+            except KeyboardInterrupt as e:
+                sys.exit()
+
+            except:
+                if self.stdin is not None:
+                    errorMessage = '*** Error: Exception not handled using the batch mode!!'
+                    traceback.print_exc(file=open(self.errorsFile, 'a'))
+                    raise Exception('PeepException', 'Send me an email ;)')
+                else:
+                    errorMessage = '*** Error: Exception not handled using the interactive console!! Please, report it to the author!!'
+                    print pdfOutput.errorColor + errorMessage + pdfOutput.resetColor + pdfOutput.newLine
+                    traceback.print_exc(file=open(self.errorsFile, 'a'))
+            finally:
+                if self.stdin is not None:
+                    self.stdin.close()
+
 
     def emptyline(self):
         return
