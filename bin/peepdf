@@ -148,6 +148,8 @@ if __name__ == '__main__':
             pdfName = args[0]
             if not os.path.exists(pdfName):
                 sys.exit('Error: The file "' + pdfName + '" does not exist!!')
+            if options.scriptFile and not os.path.exists(options.scriptFile):
+                sys.exit('Error: The script file "' + options.scriptFile + '" does not exist!!')
         pdf = None
         statsDict = None
         vtJsonDict = None
@@ -173,8 +175,6 @@ if __name__ == '__main__':
             console = PDFConsole(pdf, VT_KEY, options.avoidColors)
             console.runit()
         elif options.scriptFile is not None:
-            if not os.path.exists(options.scriptFile):
-                sys.exit('Error: The script file "' + options.scriptFile + '" does not exist!!')
             from peepdf.PDFConsole import PDFConsole
 
             console = PDFConsole(pdf, VT_KEY, options.avoidColors, scriptFile=options.scriptFile)
