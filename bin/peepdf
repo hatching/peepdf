@@ -157,8 +157,7 @@ if __name__ == '__main__':
 
         if pdfName is not None:
             pdfParser = PDFParser()
-            ret, pdf = pdfParser.parse(pdfName, options.isForceMode, options.isLooseMode, options.isManualAnalysis)
-            #ret is not check here, was it the case previous code ?
+            pdf = pdfParser.parse(pdfName, options.isForceMode, options.isLooseMode, options.isManualAnalysis)
             if options.checkOnVT:
                 # Checks the MD5 on VirusTotal
                 pdf.getVtInfo(VT_KEY)

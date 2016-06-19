@@ -7155,7 +7155,7 @@ class PDFParser :
             ret = pdfFile.decrypt()
             if ret[0] == -1:
                 pdfFile.addError(ret[1])
-        return (0,pdfFile)
+        return pdfFile
 
     def parsePDFSections(self, content, forceMode = False, looseMode = False):
         '''
