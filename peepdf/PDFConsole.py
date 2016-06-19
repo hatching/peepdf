@@ -98,6 +98,8 @@ class PDFConsole(PDFOutput, cmd.Cmd):
             except:
                 self.avoidColor = True
         PDFOutput.__init__(self, self.avoidColor)
+        if pdfFile is not None and stdin is None:
+            self.intro = self.getPeepReport(pdfFile.getStats())
 
         if scriptFile is not None:
             self.stdin = open(scriptFile, 'rb')
@@ -114,11 +116,10 @@ class PDFConsole(PDFOutput, cmd.Cmd):
                 self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
             else:
                 self.prompt = 'PPDF> '
+        # if self.stdin is None, Cmd.__init__ set it to sys.stdin
         cmd.Cmd.__init__(self, stdin=self.stdin)
 
         self.pdfFile = pdfFile
-        if pdfFile is not None:
-            self.intro = self.getPeepReport(pdfFile.getStats())
         self.variables = {'output_limit': [500, 500],
                           'malformed_options': [[], []],
                           'header_file': [None, None],
