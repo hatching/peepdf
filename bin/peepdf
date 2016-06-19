@@ -154,7 +154,6 @@ if __name__ == '__main__':
                 sys.exit('Error: The script file "' + options.scriptFile + '" does not exist!!')
         pdf = None
         statsDict = None
-        vtJsonDict = None
 
         if pdfName is not None:
             pdfParser = PDFParser()
@@ -165,13 +164,7 @@ if __name__ == '__main__':
                 pdf.getVtInfo(VT_KEY)
             statsDict = pdf.getStats()
 
-        if options.xmlOutput:
-            xmlReport = pdfOutput.getXML(statsDict)
-            sys.stdout.write(xmlReport)
-        elif options.jsonOutput and not options.commands:
-            jsonReport = pdfOutput.getJSON(statsDict)
-            sys.stdout.write(jsonReport)
-        elif options.isInteractive:
+        if options.isInteractive:
             console = PDFConsole(pdf, VT_KEY, options.avoidColors)
             console.runit()
         elif options.scriptFile is not None:

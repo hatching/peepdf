@@ -397,14 +397,14 @@ class PDFOutput(object):
         return etree.tostring(root, pretty_print=True)
 
 
-    def getPeepReport(self, statsDict, stats=""):
+    def getPeepReport(self, statsDict):
 
         if not self.avoidColor:
             beforeStaticLabel = self.staticColor
         else:
             beforeStaticLabel = ''
 
-        stats += beforeStaticLabel + 'File: ' + self.resetColor + statsDict['File'] + self.newLine
+        stats = beforeStaticLabel + 'File: ' + self.resetColor + statsDict['File'] + self.newLine
         stats += beforeStaticLabel + 'MD5: ' + self.resetColor + statsDict['MD5'] + self.newLine
         stats += beforeStaticLabel + 'SHA1: ' + self.resetColor + statsDict['SHA1'] + self.newLine
         stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + self.newLine
@@ -536,3 +536,19 @@ class PDFOutput(object):
                     stats += '\t\t' + url + self.newLine
             stats += self.newLine * 2
             return stats
+
+    def getReport(self, statsDict, format="text"):
+        """
+        Wrapper to get a formatted report info.
+            @statsDict: dict with pdf info.
+            @format: expected output format.
+                Possible  value are 'text', 'xml' and 'json'
+        """
+        if format == "text":
+            return self.getPeepReport(statsDict)
+        elif format == "json":
+            return self.getPeepJSON(statsDict)
+        elif format == "xml":
+            return self.getPeepXML(statsDict)
+        else:
+            raise Exception("Format {} not handled".format(format))
