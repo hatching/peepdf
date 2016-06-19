@@ -31,10 +31,12 @@ import sys
 import os
 import optparse
 import traceback
+import StringIO
 
 import peepdf.PDFOutput as PDFOutput
 import peepdf.PDFUtils as PDFUtils
 from peepdf.PDFCore import PDFParser
+from peepdf.PDFConsole import PDFConsole
 
 from peepdf.constants import PEEPDF_VERSION, PEEPDF_REVISION, AUTHOR, AUTHOR_EMAIL, \
     AUTHOR_TWITTER, PEEPDF_URL, GITHUB_URL, TWITTER_URL, PEEPDF_ROOT
@@ -170,18 +172,12 @@ if __name__ == '__main__':
             jsonReport = pdfOutput.getJSON(statsDict)
             sys.stdout.write(jsonReport)
         elif options.isInteractive:
-            from peepdf.PDFConsole import PDFConsole
-
             console = PDFConsole(pdf, VT_KEY, options.avoidColors)
             console.runit()
         elif options.scriptFile is not None:
-            from peepdf.PDFConsole import PDFConsole
-
             console = PDFConsole(pdf, VT_KEY, options.avoidColors, scriptFile=options.scriptFile)
             console.runit()
         elif options.commands is not None:
-            from PDFConsole import PDFConsole
-
             commands = "\n".join(options.commands)
             inputCommands = StringIO.StringIO(commands)
             console = PDFConsole(pdf, VT_KEY, options.avoidColors, stdin=inputCommands)
