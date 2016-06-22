@@ -20,4 +20,7 @@ PEEPDF_URL = 'http://peepdf.eternal-todo.com'
 GITHUB_URL = 'https://github.com/jesparza/peepdf' 
 TWITTER_URL = 'http://twitter.com/peepdf'
 
-PEEPDF_ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
+PEEPDF_ROOT = os.path.dirname(
+    os.path.realpath(os.path.join(sys.argv[0], ".."))
+)
+ERROR_FILE = os.path.join(PEEPDF_ROOT, "errors.txt") 

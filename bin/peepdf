@@ -39,7 +39,7 @@ from peepdf.PDFCore import PDFParser
 from peepdf.PDFConsole import PDFConsole
 
 from peepdf.constants import PEEPDF_VERSION, PEEPDF_REVISION, AUTHOR, AUTHOR_EMAIL, \
-    AUTHOR_TWITTER, PEEPDF_URL, GITHUB_URL, TWITTER_URL, PEEPDF_ROOT
+    AUTHOR_TWITTER, PEEPDF_URL, GITHUB_URL, TWITTER_URL, PEEPDF_ROOT, ERROR_FILE
 
 newLine = os.linesep
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
                           help='Avoids automatic Javascript analysis. Useful with eternal loops like heap spraying.')
     argsParser.add_option('-u', '--update', action='store_true', dest='update', default=False,
                           help='Updates peepdf with the latest files from the repository.')
-    argsParser.add_option('-g', '--grinch-mode', action='store_true', dest='avoidColors', default=False,
+    argsParser.add_option('-g', '--grinch-mode', action='store_true', dest='avoidColor', default=False,
                           help='Avoids colorized output in the interactive console.')
     argsParser.add_option('-v', '--version', action='store_true', dest='version', default=False,
                           help='Shows program\'s version number.')
@@ -83,7 +83,6 @@ if __name__ == '__main__':
     (options, args) = argsParser.parse_args()
     
     try:
-        pdfOutput = PDFOutput.PDFOutput(os.path.join(PEEPDF_ROOT, 'errors.txt'), options.avoidColors)
         if options.scriptFile is not None and options.commands:
             sys.stdout.write("scriptFile and commands options can't be used at the same time.\n")
             sys.exit(argsParser.print_help())
@@ -164,17 +163,18 @@ if __name__ == '__main__':
             statsDict = pdf.getStats()
 
         if options.isInteractive:
-            console = PDFConsole(pdf, VT_KEY, options.avoidColors)
+            console = PDFConsole(pdf, VT_KEY, options.avoidColor)
             console.runit()
         elif options.scriptFile is not None:
-            console = PDFConsole(pdf, VT_KEY, options.avoidColors, scriptFile=options.scriptFile)
+            console = PDFConsole(pdf, VT_KEY, options.avoidColor, scriptFile=options.scriptFile)
             console.runit()
         elif options.commands is not None:
             commands = "\n".join(options.commands)
             inputCommands = StringIO.StringIO(commands)
-            console = PDFConsole(pdf, VT_KEY, options.avoidColors, stdin=inputCommands)
+            console = PDFConsole(pdf, VT_KEY, options.avoidColor, stdin=inputCommands)
             console.runit()
         elif statsDict is not None:
+            pdfOutput = PDFOutput.PDFOutput(avoidColor=options.avoidColor)
             warnings = pdfOutput.getDecryptError(statsDict)
             warnings += pdfOutput.getDependenciesWarning()
             if warnings != "":
@@ -194,13 +194,12 @@ if __name__ == '__main__':
             excName = excReason = None
         if excName == None or excName != 'PeepException':
             errorMessage = '*** Error: Exception not handled!!'
-            traceback.print_exc(file=open(pdfOutput.errorsFile, 'a'))
-        print pdfOutput.errorColor + errorMessage + pdfOutput.resetColor + pdfOutput.newLine
+            traceback.print_exc(file=open(ERROR_FILE, 'a'))
+        sys.stderr.write(errorMessage)
     finally:
-        if os.path.exists(pdfOutput.errorsFile):
-            message = pdfOutput.newLine + 'Please, don\'t forget to report the errors found:' + pdfOutput.newLine * 2
+        if os.path.exists(ERROR_FILE):
+            message = newLine + 'Please, don\'t forget to report the errors found:' + newLine * 2
             message += '\t- Sending the file "%s" to the author (mailto:%s)%s' % (
-                pdfOutput.errorsFile, AUTHOR_EMAIL, pdfOutput.newLine)
-            message += '\t- And/Or creating an issue on the project webpage (https://github.com/jesparza/peepdf/issues)' + pdfOutput.newLine
-            message = pdfOutput.errorColor + message + pdfOutput.resetColor
-            sys.exit(message)
+                ERROR_FILE, AUTHOR_EMAIL, newLine)
+            message += '\t- And/Or creating an issue on the project webpage (https://github.com/jesparza/peepdf/issues)' + newLine
+            sys.stderr.write(message)

@@ -35,7 +35,7 @@ from peepdf.PDFCore import PDFParser, vulnsDict
 from peepdf.PDFUtils import vtcheck
 
 from peepdf.constants import AUTHOR, AUTHOR_EMAIL, PEEPDF_VERSION, PEEPDF_REVISION, \
-    PEEPDF_URL, PEEPDF_ROOT
+    PEEPDF_URL, PEEPDF_ROOT, ERROR_FILE
 
 try:
     import PyV8
@@ -64,18 +64,25 @@ try:
     LXML_MODULE = True
 except:
     LXML_MODULE = False
-    
+
 
 class PDFOutput(object):
+    """
+    Class to get an output from PDFFile instance object
+    """
 
-    def __init__(self, errorsFile, avoidOutputColors=False):
+    def __init__(self, errorsFile=ERROR_FILE, avoidColor=False):
+        """
+            @errorsFile: path to the log error file
+            @avoidColor: Bool to prevent color on output
+        """
         global COLORIZED_OUTPUT
         self.warningColor = ''
         self.errorColor = ''
         self.alertColor = ''
         self.staticColor = ''
         self.resetColor = ''
-        if not COLORIZED_OUTPUT or avoidOutputColors:
+        if avoidColor or not COLORIZED_OUTPUT:
             self.avoidColor = True
         else:
             try:

@@ -42,12 +42,8 @@ from peepdf.PDFCore import *
 from base64 import b64encode, b64decode
 from PDFFilters import decodeStream, encodeStream
 from peepdf.jjdecode import JJDecoder
+from colorama import Fore
 
-try:
-    from colorama import init, Fore, Back, Style
-    COLORIZED_OUTPUT = True
-except:
-    COLORIZED_OUTPUT = False
 try:
     import PyV8
     JS_MODULE = True
@@ -91,16 +87,16 @@ class PDFConsole(PDFOutput, cmd.Cmd):
             @batchMode: deprecated mode which purpose was to handle command on cli execution
             @scriptFile: Script file path to execute. Overlap @stdin.
         """
-        if COLORIZED_OUTPUT and not avoidOutputColors:
+        self.avoidColor = avoidOutputColors
+        PDFOutput.__init__(self, avoidColor=self.avoidColor)
+        if not self.avoidColor:
             try:
                 self.promptColor = RL_PROMPT_START_IGNORE + Fore.GREEN + RL_PROMPT_END_IGNORE
-                self.avoidColor = False
             except:
                 self.avoidColor = True
-        PDFOutput.__init__(self, self.avoidColor)
+
         if pdfFile is not None and stdin is None:
             self.intro = self.getPeepReport(pdfFile.getStats())
-
         if scriptFile is not None:
             self.stdin = open(scriptFile, 'rb')
             self.use_rawinput = False
