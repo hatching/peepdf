@@ -23,7 +23,11 @@ http://twitter.com/peepdf
 
 ** Installation **
 
-Run, in peepdf directory
+You can either
+    pip install peepdf
+This module comes from jbremer fork.
+
+Or download the source and then run inside it :
 
     easy_install .
 
@@ -42,37 +46,35 @@ There are two important options when peepdf is executed:
 
 Shows the statistics of the file after being decoded/decrypted and analysed:
 
-    peepdf.py [options] pdf_file
+    peepdf [options] pdf_file
 
 
 * Interactive console
 
 Executes the interactive console to let play with the PDF file:
 
-    peepdf.py -i [options] pdf_file
+    peepdf -i [options] pdf_file
 
 If no PDF file is specified it's possible to use the decode/encode/js*/sctest commands and create a new PDF file:
 
-    peepdf.py -i
+    peepdf -i
 
 
 * Batch execution
 
 It's possible to use a commands file to specify the commands to be executed in the batch mode. This type of execution is good to automatise analysis of several files:
 
-    peepdf.py [options] -s commands_file pdf_file
+    peepdf [options] -s commands_file pdf_file
 
 
 
 ** Updating **
 
-The option has been desactivated as it is not working for now.
-To update, cd to peepdf directory and type:
+No more updating other than pip utility.
+Or run inside peepdf dir :
 
-    git pull origin master
+    git pull <remote> <branch>
     easy_install .
-
-
 
 ** Some hints **
 
