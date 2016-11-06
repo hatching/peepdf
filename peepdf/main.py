@@ -91,7 +91,7 @@ def main():
 
         if pdfName is not None:
             pdfParser = PDFParser()
-            pdf = pdfParser.parse(pdfName, options.isForceMode, options.isLooseMode, options.isManualAnalysis)
+            ret, pdf = pdfParser.parse(pdfName, options.isForceMode, options.isLooseMode, options.isManualAnalysis)
             if options.checkOnVT:
                 # Checks the MD5 on VirusTotal
                 pdf.getVtInfo(VT_KEY)
