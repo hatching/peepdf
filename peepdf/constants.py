@@ -11,7 +11,7 @@ import os
 import sys
 
 PEEPDF_VERSION = '0.3'
-PEEPDF_REVISION = '2'
+PEEPDF_REVISION = '3'
 AUTHOR = 'Jose Miguel Esparza'
 AUTHOR_EMAIL = 'peepdf AT eternal-todo(dot)com'
 AUTHOR_TWITTER = 'http://twitter.com/EternalTodo'
