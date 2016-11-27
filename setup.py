@@ -1,11 +1,13 @@
 from setuptools import setup
 
+execfile("peepdf/constants.py")
+
 setup(
     name="peepdf",
-    version="0.3.3",
-    author="Jose Miguel Esparza",
-    license="GNU GPLv3",
-    url="http://eternal-todo.com",
+    version=PEEPDF_VERSION,
+    author=AUTHOR,
+    license=LICENCE,
+    url=PEEPDF_URL,
     install_requires=[
         "jsbeautifier==1.6.2",
         "colorama==0.3.7",

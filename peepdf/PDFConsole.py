@@ -44,6 +44,8 @@ from peepdf.PDFCore import (
     PDFReference, PDFString, PDFArray, PDFBool, PDFNull, vulnsDict, PDFParser
 )
 
+from peepdf.PDFOutput import PDFOutput
+
 from base64 import b64encode, b64decode
 from PDFFilters import decodeStream, encodeStream
 from peepdf.jjdecode import JJDecoder
@@ -79,7 +81,6 @@ FILE_ADD = 2
 VAR_WRITE = 3
 VAR_ADD = 4
 newLine = os.linesep
-errorsFile = os.path.expanduser("~/.peepdf-error.txt")
 
 filter2RealFilterDict = {'b64': 'base64', 'base64': 'base64', 'asciihex': '/ASCIIHexDecode', 'ahx': '/ASCIIHexDecode',
                          'ascii85': '/ASCII85Decode', 'a85': '/ASCII85Decode', 'lzw': '/LZWDecode',
@@ -88,43 +89,44 @@ filter2RealFilterDict = {'b64': 'base64', 'base64': 'base64', 'asciihex': '/ASCI
                          'jbig2': '/JBIG2Decode', 'dct': '/DCTDecode', 'jpx': '/JPXDecode'}
 
 
-class PDFConsole(cmd.Cmd):
+class PDFConsole(PDFOutput, cmd.Cmd):
     '''
         Class of the peepdf interactive console. To see details about commands: http://code.google.com/p/peepdf/wiki/Commands
     '''
 
-    def __init__(self, pdfFile, vtKey, avoidOutputColors=False, stdin=None, batchMode=False, jsonOutput=False):
-        global COLORIZED_OUTPUT
-        cmd.Cmd.__init__(self, stdin=stdin)
-        self.warningColor = ''
-        self.errorColor = ''
-        self.alertColor = ''
-        self.staticColor = ''
-        self.resetColor = ''
-        if not COLORIZED_OUTPUT or avoidOutputColors:
-            self.avoidOutputColors = True
-        else:
+    def __init__(self, pdfFile, vtKey, avoidColors=False, stdin=None, batchMode=False, jsonOutput=False, scriptFile=None):
+        """
+            @batchMode: deprecated mode which purpose was to handle command on cli execution
+            @scriptFile: Script file path to execute. Overlap @stdin.
+        """
+        self.avoidColors = avoidColors
+        PDFOutput.__init__(self, avoidColors=self.avoidColors)
+        if not self.avoidColors:
             try:
-                init()
-                self.warningColor = Fore.YELLOW
-                self.errorColor = Fore.RED
-                self.alertColor = Fore.RED
-                self.staticColor = Fore.BLUE
                 self.promptColor = RL_PROMPT_START_IGNORE + Fore.GREEN + RL_PROMPT_END_IGNORE
-                self.resetColor = Style.RESET_ALL
-                self.avoidOutputColors = False
             except:
-                self.avoidOutputColors = True
-                COLORIZED_OUTPUT = False
+                self.avoidColors = True
 
-        if not self.avoidOutputColors:
-            self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
-        else:
-            self.prompt = 'PPDF> '
-        self.use_rawinput = True
-        if stdin is not None:
+        if pdfFile is not None and stdin is None:
+            self.intro = self.getPeepReport(pdfFile.getStats())
+        if scriptFile is not None:
+            self.stdin = open(scriptFile, 'rb')
             self.use_rawinput = False
             self.prompt = ''
+        elif stdin is not None: 
+            self.stdin = stdin
+            self.use_rawinput = False
+            self.prompt = ''
+        else:
+            self.stdin = stdin
+            self.use_rawinput = True
+            if not self.avoidColors:
+                self.prompt = self.promptColor + 'PPDF> ' + RL_PROMPT_START_IGNORE + self.resetColor + RL_PROMPT_END_IGNORE
+            else:
+                self.prompt = 'PPDF> '
+        # if self.stdin is None, Cmd.__init__ set it to sys.stdin
+        cmd.Cmd.__init__(self, stdin=self.stdin)
+
         self.pdfFile = pdfFile
         self.variables = {'output_limit': [500, 500],
                           'malformed_options': [[], []],
@@ -140,6 +142,27 @@ class PDFConsole(cmd.Cmd):
         self.jsonOutput = jsonOutput
         self.outputVarName = None
         self.outputFileName = None
+
+    def runit(self):
+        while not self.leaving:
+            try:
+                self.cmdloop()
+            except KeyboardInterrupt as e:
+                sys.exit()
+
+            except:
+                if self.stdin is not None:
+                    errorMessage = '*** Error: Exception not handled using the batch mode!!'
+                    traceback.print_exc(file=open(self.errorsFile, 'a'))
+                    raise Exception('PeepException', 'Send me an email ;)')
+                else:
+                    errorMessage = '*** Error: Exception not handled using the interactive console!! Please, report it to the author!!'
+                    print pdfOutput.errorColor + errorMessage + pdfOutput.resetColor + pdfOutput.newLine
+                    traceback.print_exc(file=open(self.errorsFile, 'a'))
+            finally:
+                if self.stdin is not None:
+                    self.stdin.close()
+
 
     def emptyline(self):
         return
@@ -1413,173 +1436,19 @@ class PDFConsole(cmd.Cmd):
             message = '*** Error: You must open a file!!'
             self.log_output('info ' + argv, message)
             return False
-        stats = ''
         args = self.parseArgs(argv)
         if args is None:
             message = '*** Error: The command line arguments have not been parsed successfully!!'
             self.log_output('info ' + argv, message)
             return False
-        if not self.avoidOutputColors:
+        if not self.avoidColors:
             beforeStaticLabel = self.staticColor
         else:
             beforeStaticLabel = ''
+        stats = ""
         if len(args) == 0:
             statsDict = self.pdfFile.getStats()
-            stats += beforeStaticLabel + 'File: ' + self.resetColor + statsDict['File'] + newLine
-            stats += beforeStaticLabel + 'MD5: ' + self.resetColor + statsDict['MD5'] + newLine
-            stats += beforeStaticLabel + 'SHA1: ' + self.resetColor + statsDict['SHA1'] + newLine
-            # stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + newLine
-            stats += beforeStaticLabel + 'Size: ' + self.resetColor + statsDict['Size'] + ' bytes' + newLine
-            if statsDict['Detection'] != []:
-                detectionReportInfo = ''
-                if statsDict['Detection'] is not None:
-                    detectionLevel = statsDict['Detection'][0] / (statsDict['Detection'][1] / 3)
-                    if detectionLevel == 0:
-                        detectionColor = self.alertColor
-                    elif detectionLevel == 1:
-                        detectionColor = self.warningColor
-                    else:
-                        detectionColor = ''
-                    detectionRate = '%s%d%s/%d' % (
-                        detectionColor, statsDict['Detection'][0], self.resetColor, statsDict['Detection'][1])
-                    if statsDict['Detection report'] != '':
-                        detectionReportInfo = beforeStaticLabel + 'Detection report: ' + self.resetColor + statsDict[
-                            'Detection report'] + newLine
-                    else:
-                        detectionRate = 'File not found on VirusTotal'
-                    stats += beforeStaticLabel + 'Detection: ' + self.resetColor + detectionRate + newLine
-                    stats += detectionReportInfo
-            stats += beforeStaticLabel + 'Version: ' + self.resetColor + statsDict['Version'] + newLine
-            stats += beforeStaticLabel + 'Binary: ' + self.resetColor + statsDict['Binary'] + newLine
-            stats += beforeStaticLabel + 'Linearized: ' + self.resetColor + statsDict['Linearized'] + newLine
-            stats += beforeStaticLabel + 'Encrypted: ' + self.resetColor + statsDict['Encrypted']
-            if statsDict['Encryption Algorithms'] != []:
-                stats += ' ('
-                for algorithmInfo in statsDict['Encryption Algorithms']:
-                    stats += algorithmInfo[0] + ' ' + str(algorithmInfo[1]) + ' bits, '
-                stats = stats[:-2] + ')'
-            stats += newLine
-            stats += beforeStaticLabel + 'Updates: ' + self.resetColor + statsDict['Updates'] + newLine
-            stats += beforeStaticLabel + 'Objects: ' + self.resetColor + statsDict['Objects'] + newLine
-            stats += beforeStaticLabel + 'Streams: ' + self.resetColor + statsDict['Streams'] + newLine
-            stats += beforeStaticLabel + 'URIs: ' + self.resetColor + statsDict['URIs'] + newLine
-            stats += beforeStaticLabel + 'Comments: ' + self.resetColor + statsDict['Comments'] + newLine
-            stats += beforeStaticLabel + 'Errors: ' + self.resetColor + str(len(statsDict['Errors'])) + newLine * 2
-            for version in range(len(statsDict['Versions'])):
-                statsVersion = statsDict['Versions'][version]
-                stats += beforeStaticLabel + 'Version ' + self.resetColor + str(version) + ':' + newLine
-                if statsVersion['Catalog'] is not None:
-                    stats += beforeStaticLabel + '\tCatalog: ' + self.resetColor + statsVersion['Catalog'] + newLine
-                else:
-                    stats += beforeStaticLabel + '\tCatalog: ' + self.resetColor + 'No' + newLine
-                if statsVersion['Info'] is not None:
-                    stats += beforeStaticLabel + '\tInfo: ' + self.resetColor + statsVersion['Info'] + newLine
-                else:
-                    stats += beforeStaticLabel + '\tInfo: ' + self.resetColor + 'No' + newLine
-                stats += (
-                    beforeStaticLabel + '\tObjects (' + statsVersion['Objects'][0] + '): ' +
-                    self.resetColor + str(statsVersion['Objects'][1]) + newLine
-                )
-                if statsVersion['Compressed Objects'] is not None:
-                    stats += (
-                        beforeStaticLabel + '\tCompressed objects (' +
-                        statsVersion['Compressed Objects'][0] + '): ' + self.resetColor +
-                        str(statsVersion['Compressed Objects'][1]) + newLine
-                    )
-                if statsVersion['Errors'] is not None:
-                    stats += (
-                        beforeStaticLabel + '\t\tErrors (' + statsVersion['Errors'][0] + '): ' +
-                        self.resetColor + str(statsVersion['Errors'][1]) + newLine
-                    )
-                stats += (
-                    beforeStaticLabel + '\tStreams (' + statsVersion['Streams'][0] + '): ' +
-                    self.resetColor + str(statsVersion['Streams'][1])
-                )
-                if statsVersion['Xref Streams'] is not None:
-                    stats += (
-                        newLine + beforeStaticLabel + '\t\tXref streams (' +
-                        statsVersion['Xref Streams'][0] + '): ' + self.resetColor +
-                        str(statsVersion['Xref Streams'][1])
-                    )
-                if statsVersion['Object Streams'] is not None:
-                    stats += (
-                        newLine + beforeStaticLabel + '\t\tObject streams (' +
-                        statsVersion['Object Streams'][0] + '): ' + self.resetColor +
-                        str(statsVersion['Object Streams'][1])
-                    )
-                if int(statsVersion['Streams'][0]) > 0:
-                    stats += (
-                        newLine + beforeStaticLabel + '\t\tEncoded (' + statsVersion['Encoded'][0] + '): ' +
-                        self.resetColor + str(statsVersion['Encoded'][1])
-                    )
-                    if statsVersion['Decoding Errors'] is not None:
-                        stats += (
-                            newLine + beforeStaticLabel + '\t\tDecoding errors (' +
-                            statsVersion['Decoding Errors'][0] + '): ' + self.resetColor +
-                            str(statsVersion['Decoding Errors'][1])
-                        )
-                if statsVersion['URIs'] is not None:
-                    stats += (
-                        newLine + beforeStaticLabel + '\tObjects with URIs (' +
-                        statsVersion['URIs'][0] + '): ' + self.resetColor + str(statsVersion['URIs'][1])
-                    )
-                if not self.avoidOutputColors:
-                    beforeStaticLabel = self.warningColor
-                if statsVersion['Objects with JS code'] is not None:
-                    stats += (
-                        newLine + beforeStaticLabel + '\tObjects with JS code (' +
-                        statsVersion['Objects with JS code'][0] + '): ' +
-                        self.resetColor + str(statsVersion['Objects with JS code'][1])
-                    )
-                actions = statsVersion['Actions']
-                events = statsVersion['Events']
-                vulns = statsVersion['Vulns']
-                elements = statsVersion['Elements']
-                if events is not None or actions is not None or vulns is not None or elements is not None:
-                    stats += newLine + beforeStaticLabel + '\tSuspicious elements:' + self.resetColor + newLine
-                    if events is not None:
-                        for event in events:
-                            stats += '\t\t' + beforeStaticLabel + event + ' (%d): ' % len(events[event]) + \
-                                     self.resetColor + str(events[event]) + newLine
-                    if actions is not None:
-                        for action in actions:
-                            stats += '\t\t' + beforeStaticLabel + action + ' (%d): ' % len(actions[action]) + \
-                                     self.resetColor + str(actions[action]) + newLine
-                    if vulns is not None:
-                        for vuln in vulns:
-                            if vuln in vulnsDict:
-                                vulnName = vulnsDict[vuln][0]
-                                vulnCVEList = vulnsDict[vuln][1]
-                                stats += '\t\t' + beforeStaticLabel + vulnName + ' ('
-                                for vulnCVE in vulnCVEList:
-                                    stats += vulnCVE + ','
-                                stats = (
-                                    stats[:-1] + ') (%d): ' % len(vulns[vuln]) + self.resetColor +
-                                    str(vulns[vuln]) + newLine
-                                )
-                            else:
-                                stats += '\t\t' + beforeStaticLabel + vuln + ' (%d): ' % len(vulns[vuln]) + \
-                                         self.resetColor + str(vulns[vuln]) + newLine
-                    if elements is not None:
-                        for element in elements:
-                            if element in vulnsDict:
-                                vulnName = vulnsDict[element][0]
-                                vulnCVEList = vulnsDict[element][1]
-                                stats += '\t\t' + beforeStaticLabel + vulnName + ' ('
-                                for vulnCVE in vulnCVEList:
-                                    stats += vulnCVE + ','
-                                stats = stats[:-1] + '): ' + self.resetColor + str(elements[element]) + newLine
-                            else:
-                                stats += '\t\t' + beforeStaticLabel + element + ': ' + self.resetColor + str(
-                                    elements[element]) + newLine
-                if not self.avoidOutputColors:
-                    beforeStaticLabel = self.staticColor
-                urls = statsVersion['URLs']
-                if urls is not None:
-                    stats += newLine + beforeStaticLabel + '\tFound URLs:' + self.resetColor + newLine
-                    for url in urls:
-                        stats += '\t\t' + url + newLine
-                stats += newLine * 2
+            stats = self.getPeepReport(statsDict)
             self.log_output('info ' + argv, stats)
             return False
         elif len(args) == 1:
@@ -2188,6 +2057,7 @@ class PDFConsole(cmd.Cmd):
                 self.log_output('js_eval ' + argv, evalCode)
         except:
             error = str(sys.exc_info()[1])
+            #TODO use the global variable for erro file path
             f = open(os.path.expanduser("~/.peepdf-jserror.log"), "ab")
             f.write(error + newLine)
 
@@ -2886,8 +2756,7 @@ class PDFConsole(cmd.Cmd):
             message = '*** Error: Opening document failed!!'
             self.pdfFile = None
         self.log_output('open ' + argv, message)
-        if not JS_MODULE:
-            print 'Warning: PyV8 is not installed!!' + newLine
+        print self.dependenciesWarning()
         if self.pdfFile is not None:
             self.do_info('')
 
@@ -2910,8 +2779,10 @@ class PDFConsole(cmd.Cmd):
             message = '*** Error: You must open a file!!'
             self.log_output('rawobject ' + argv, message)
             return False
+        compressed = False
         rawValue = ''
         offset = 0
+        size = 0
         args = self.parseArgs(argv)
         if args is None:
             message = '*** Error: The command line arguments have not been parsed successfully!!'
@@ -2944,6 +2815,7 @@ class PDFConsole(cmd.Cmd):
                 xrefArray = ret[1]
             if xrefArray[0] is not None:
                 offset = xrefArray[0].getOffset()
+                size = xrefArray[0].getSize()
                 rawValue = xrefArray[0].toFile()
         elif id == 'trailer':
             ret = self.pdfFile.getTrailer(version)
@@ -2955,6 +2827,7 @@ class PDFConsole(cmd.Cmd):
                 trailerArray = ret[1]
             if trailerArray[0] is not None:
                 offset = trailerArray[0].getOffset()
+                size = trailerArray[0].getSize()
                 rawValue = trailerArray[0].toFile()
         else:
             id = int(id)
@@ -2964,7 +2837,9 @@ class PDFConsole(cmd.Cmd):
                 self.log_output('rawobject ' + argv, message)
                 return False
             object = indirectObject.getObject()
+            compressed = object.isCompressed()
             offset = indirectObject.getOffset()
+            size = indirectObject.getSize()
             rawValue = str(object.getRawValue())
         if offset == -1:
             message = '*** Error: offset cannot be calculated!!'
@@ -3743,7 +3618,7 @@ class PDFConsole(cmd.Cmd):
                     if args == []:
                         self.pdfFile.setDetectionRate([jsonDict['positives'], jsonDict['total']])
                         self.pdfFile.setDetectionReport(jsonDict['permalink'])
-                    if not self.avoidOutputColors:
+                    if not self.avoidColors:
                         detectionLevel = jsonDict['positives'] / (jsonDict['total'] / 3)
                         if detectionLevel == 0:
                             detectionColor = self.alertColor

@@ -34,7 +34,7 @@ import sys
 import peepdf.aes as AES
 from peepdf.PDFUtils import (
     encodeName, unescapeString, encodeString, escapeString, numToHex,
-    numToString
+    numToString, vtcheck
 )
 from peepdf.PDFCrypto import (
     RC4, computeObjectKey, computeUserPass, isUserPass, isOwnerPass,
@@ -4774,6 +4774,27 @@ class PDFFile:
         self.numEncodedStreams = 0
         self.numDecodingErrors = 0
         self.maxObjectId = 0
+
+    def getVtInfo(self, vt_key):
+        ret = vtcheck(self.getMD5(), vt_key)
+        if ret[0] == -1:
+            self.addError(ret[1])
+        else:
+            self.parseVtReport(ret[1])
+
+    def parseVtReport(self, vtJsonDict):
+        if vtJsonDict.has_key('response_code'):
+            if vtJsonDict['response_code'] == 1:
+                if vtJsonDict.has_key('positives') and vtJsonDict.has_key('total'):
+                    self.setDetectionRate([vtJsonDict['positives'], vtJsonDict['total']])
+                else:
+                    self.addError('Missing elements in the response from VirusTotal!!')
+                if vtJsonDict.has_key('permalink'):
+                    self.setDetectionReport(vtJsonDict['permalink'])
+            else:
+                self.setDetectionRate(None)
+        else:
+            self.addError('Bad response from VirusTotal!!')
 
     def addBody(self, newBody):
         if newBody is not None and isinstance(newBody, PDFBody):

@@ -162,7 +162,6 @@ def escapeRegExpString(string):
 def escapeString(string):
     '''
         Escape the given string
-
         @param string: A string to be escaped
         @return: Escaped string
     '''
