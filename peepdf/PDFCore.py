@@ -4322,25 +4322,17 @@ class PDFBody:
                                 self.setObject(compressedId, compressedObject, offset)
                             del(compressedObjectsDict)
         for id in self.referencedJSObjects:
-            if id not in self.containingJS:
-                if self.objects:
-                    if str(id) in self.objects:
-                        errorMessage = 'Object is None'
-                        if isForceMode:
-                            pdfFile.addError(errorMessage)
-                            continue
-                else:
-                    object = self.objects[str(id)].getObject()
-                    if object:
-                        errorMessage = 'Object is None'
-                        if isForceMode:
-                            pdfFile.addError("TEST")
-                            pdfFile.addError(errorMessage)
-                            continue
-                        else:
-                            return (-1, errorMessage)
-                    object.setReferencedJSObject(True)
-                    self.updateStats(id, object)
+            if id not in self.containingJS and id in self.objects:
+                object = self.objects[id].getObject()
+                if object is None:
+                    errorMessage = 'Object is None'
+                    if isForceMode:
+                        pdfFile.addError(errorMessage)
+                        continue
+                    else:
+                        return (-1, errorMessage)
+                object.setReferencedJSObject(True)
+                self.updateStats(id, object)
         if errorMessage != '':
             return (-1, errorMessage)
         return (0, '')
