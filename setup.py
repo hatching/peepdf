@@ -10,7 +10,7 @@ setup(
         "jsbeautifier==1.6.2",
         "colorama==0.3.7",
         "future>=0.16.0",
-        "Pillow==3.2.0",
+        "Pillow",
         "pythonaes==1.0",
     ],
     entry_points={
