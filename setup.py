@@ -7,8 +7,8 @@ setup(
     license="GNU GPLv3",
     url="http://eternal-todo.com",
     install_requires=[
-        "jsbeautifier==1.6.2",
-        "colorama==0.3.9",
+        "jsbeautifier>=1.6.2",
+        "colorama>=0.3.7",
         "future>=0.16.0",
         "Pillow",
         "pythonaes==1.0",
