@@ -12,6 +12,7 @@ setup(
         "future>=0.16.0",
         "Pillow>=3.2.0",
         "pythonaes==1.0",
+        "pycrypto==3.14.1"
     ],
     entry_points={
         "console_scripts": [

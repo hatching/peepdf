@@ -32,7 +32,8 @@ import random
 import warnings
 import sys
 import peepdf.aes
-import six
+
+from Crypto.Cipher import ARC4
 
 warnings.filterwarnings("ignore")
 
@@ -189,6 +190,7 @@ def computeUserPass(userPassString, dictO, fileID, pElement, keyLength=128, revi
     try:
         if revision == 2:
             userPass = RC4(paddingString, rc4Key)
+            print(userPass, paddingString, rc4Key, "herererere")
         elif revision > 2:
             counter = 1
             md5Input = paddingString + fileID
@@ -208,7 +210,8 @@ def computeUserPass(userPassString, dictO, fileID, pElement, keyLength=128, revi
             # This should not be possible or the PDF specification does not say anything about it
             return (-1, 'ComputeUserPass error: revision number is < 2 (%d)' % revision)
         return (0, userPass)
-    except:
+    except Exception as e:
+        print(e, sys.exc_info())
         return (-1, 'ComputeUserPass error: %s %s' % (str(sys.exc_info()[0]), str(sys.exc_info()[1])))
 
 
@@ -260,7 +263,7 @@ def isOwnerPass(password, dictO, dictU, computedUserPass, keyLength, revision):
         else:
             return False
     else:
-        keyLength = keyLength/8
+        keyLength = int(keyLength/8)
         lenPass = len(password)
         if lenPass > 32:
             password = password[:32]
@@ -298,39 +301,9 @@ def RC4(data, key):
         @param key: Key used for the algorithm
         @return: The encrypted/decrypted bytes
     '''
-    y = 0
-    hash = {}
-    box = {}
-    ret = ''
-    keyLength = len(key)
-    dataLength = len(data)
 
-    # Initialization
-    for x in range(256):
-        if six.PY3:
-            hash[x] = ord(chr(key[x % keyLength]))
-        else:
-            hash[x] = ord(key[x % keyLength])
-        box[x] = x
-    for x in range(256):
-        y = (y + int(box[x]) + int(hash[x])) % 256
-        tmp = box[x]
-        box[x] = box[y]
-        box[y] = tmp
-
-    z = y = 0
-    for x in range(0, dataLength):
-        z = (z + 1) % 256
-        y = (y + box[z]) % 256
-        tmp = box[z]
-        box[z] = box[y]
-        box[y] = tmp
-        k = box[((box[z] + box[y]) % 256)]
-        if six.PY3:
-            ret += chr(data[x] ^ k)
-        else:
-            ret += chr(ord(data[x]) ^ k)
-    return ret
+    cipher = ARC4.new(key)
+    return cipher.decrypt(data)
 
 
 '''
